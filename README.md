@@ -1,2 +1,0 @@
-# csi
-computational science software
