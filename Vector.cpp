@@ -1,13 +1,15 @@
 // -----------------------------------------------------------------------
 ///
-///  @file:   main.cpp
+///  @file:   Vector.cpp
 ///
 ///  @author: Doug Reitz\n
-///  url:     https://github.com/dreitz/ \n
+///           https://github.com/dreitz/ \n
 ///
 ///  @date:   20-May-2015\n
 ///
-///  @brief   Main program
+///  @brief   Represents a 3 dimensional (x,y,z) vector
+///
+///  @details
 ///
 ///  Copyright The MIT License (MIT)
 ///
@@ -32,13 +34,39 @@
 ///            THE SOFTWARE.
 ///
 //-------------------------------------------------------------------------
+#include "Vector.h"
 
-
-#include "KcdcData.h"
-int main()
+namespace Csi
 {
-   Csi::Kcdc::KcdcData data;
-   //             input file               output file             max distance (0.0 means no max)
-   data.AddFields("data/example.data.txt", "data/example.out.txt", 0.0);
-   return 0;
-} 
+
+//----------------------------------------------------
+//
+// The following are methods to manage points
+// and elements
+//
+//----------------------------------------------------
+
+Vector& Vector::operator=(char* str)
+{
+   std::istringstream iss(str);
+   iss >> x >> y >> z;
+}
+
+std::string Vector::toString() const
+{
+   std::ostringstream oss;
+   oss << x<< " " << y << " "<< z;
+   return oss.str();
+}
+
+std::ostream& operator<< (std::ostream& os, const Vector &v)
+{
+   os << v.toString();
+   return os;
+}
+
+} // end namespace Csi
+
+
+
+

@@ -1,13 +1,15 @@
 // -----------------------------------------------------------------------
 ///
-///  @file:   main.cpp
+///  @file:   Vector.test.cpp
 ///
 ///  @author: Doug Reitz\n
-///  url:     https://github.com/dreitz/ \n
+///           https://github.com/dreitz/ \n
 ///
 ///  @date:   20-May-2015\n
 ///
-///  @brief   Main program
+///  @brief   Unit test for Vector class
+///
+///  @details
 ///
 ///  Copyright The MIT License (MIT)
 ///
@@ -32,13 +34,59 @@
 ///            THE SOFTWARE.
 ///
 //-------------------------------------------------------------------------
+#define BOOST_TEST_MODULE TestSuite
+#define BOOST_TEST_DYN_LINK
+#define BOOST_AUTO_TEST_MAIN
+#include "Vector.h"
+#include <boost/test/unit_test.hpp>
 
 
-#include "KcdcData.h"
-int main()
+
+
+BOOST_AUTO_TEST_CASE( vector_test )
 {
-   Csi::Kcdc::KcdcData data;
-   //             input file               output file             max distance (0.0 means no max)
-   data.AddFields("data/example.data.txt", "data/example.out.txt", 0.0);
-   return 0;
-} 
+    Csi::Vector v(1.0, 2.0, 3.0);
+    BOOST_CHECK_EQUAL(v.x, 1.0);
+    BOOST_CHECK_EQUAL(v.y, 2.0);
+    BOOST_CHECK_EQUAL(v.z, 3.0);
+
+
+    Csi::Vector v2;
+    v2 = v;
+    BOOST_CHECK(v==v2);
+
+    Csi::Vector v3(v2-v);
+    BOOST_CHECK_EQUAL(v3.x, 0.0);
+    BOOST_CHECK_EQUAL(v3.y, 0.0);
+    BOOST_CHECK_EQUAL(v3.z, 0.0);
+
+    v3 = v+v2;
+    BOOST_CHECK_EQUAL(v3.x, 2.0);
+    BOOST_CHECK_EQUAL(v3.y, 4.0);
+    BOOST_CHECK_EQUAL(v3.z, 6.0);
+
+    v3 -= v;
+    BOOST_CHECK_EQUAL(v3.x, 1.0);
+    BOOST_CHECK_EQUAL(v3.y, 2.0);
+    BOOST_CHECK_EQUAL(v3.z, 3.0);
+
+    double dot = v*v2;
+    BOOST_CHECK_EQUAL(dot, 14.0);
+
+    Csi::Vector v4 = v3*4.0;
+    BOOST_CHECK_EQUAL(v4.x, 4.0);
+    BOOST_CHECK_EQUAL(v4.y, 8.0);
+    BOOST_CHECK_EQUAL(v4.z, 12.0);
+
+    BOOST_CHECK_EQUAL(v3.GetMagnitude(), sqrt(1.0+4.0+9.0));
+
+
+
+
+
+
+}
+
+
+
+

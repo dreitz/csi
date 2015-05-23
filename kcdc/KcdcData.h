@@ -37,7 +37,7 @@
 ///            THE SOFTWARE.
 ///
 //-------------------------------------------------------------------------
-#ifndef _KcdcData_h_
+#ifndef _Csi_KcdcData_h_
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -45,6 +45,8 @@
 #include <sstream>
 #include <inttypes.h>
 
+namespace Csi
+{
 namespace Kcdc
 {
 namespace DataConstants
@@ -59,6 +61,8 @@ namespace DataConstants
     const double GAL_LON0 = 122.932;
 }
 
+///  @brief   Data processing and class for KASCADE Cosmic Ray Data Centre (KCDC) datasets
+///           https://kcdc.ikp.kit.edu/
 class KcdcData
 {
 public:
@@ -286,7 +290,8 @@ protected:
 };
 
 } // end namespace Kcdc
-#endif // _KcdcData_h_
+} // end namespace Csi
+#endif // _Csi_KcdcData_h_
 
 
 
