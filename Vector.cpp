@@ -52,7 +52,7 @@ Vector& Vector::operator=(char* str)
    iss >> x >> y >> z;
 }
 
-std::string Vector::toString() const
+std::string Vector::ToString() const
 {
    std::ostringstream oss;
    oss << x<< " " << y << " "<< z;
@@ -61,7 +61,7 @@ std::string Vector::toString() const
 
 std::ostream& operator<< (std::ostream& os, const Vector &v)
 {
-   os << v.toString();
+   os << v.ToString();
    return os;
 }
 

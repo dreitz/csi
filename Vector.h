@@ -64,7 +64,7 @@ struct Vector
    const Vector operator*(const double& s)  const { return Vector(s*x, s*y, s*z); }
    /// @brief Return vector in string format;
    double GetMagnitude() const { return sqrt(x*x+y*y+z*z);}
-   std::string toString() const;
+   std::string ToString() const;
    bool operator==(const Vector& r) const { return (x==r.x && y==r.y && z==r.z); }
 
    /// @brief Assign a char* string of three values to a vector
@@ -75,7 +75,7 @@ struct Vector
 struct VectorComp
 {
    /// @brief Comparator operator for use in an stl:set
-   bool operator() (const Vector& lhs, const Vector& rhs) const {return lhs.toString()<rhs.toString();}
+   bool operator() (const Vector& lhs, const Vector& rhs) const {return lhs.ToString()<rhs.ToString();}
 };
 /// @brief Used for printing a vector
 std::ostream& operator<< (std::ostream& os, const Vector &v);

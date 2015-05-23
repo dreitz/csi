@@ -1,29 +1,27 @@
 LIB = -lm 
 SRC := $(wildcard *.cpp)
+OBJS := $(wildcard *.o)
 OBJ = $(SRC:%.cpp=%.o)
 CPPFLAGS +=  -I ../ -ggdb -g3
 DEPS = $(OBJ:%.o=%.d)
 DEPEND = g++ -MM -MG -I ../
 
-all:
 
--include $(DEPS)
+all: $(OBJ) libcsi.so
 
-libcsi: $(OBJ)
+-include $(OBJS:.o=.d)
+
+%.o: %.cpp
+	g++ -c -fPIC $(CPPFLAGS)  $<  -o $@
+	$(DEPEND) $(INC) $< > $*.d
+
+libcsi.so: $(OBJ)
 	g++ -shared -o libcsi.so $(OBJ) 
 
-%.d: %.cpp
-	$(DEPEND) $(INC) $< > $@
-
-%.o: %.cpp 
-	g++ -fPIC -c $(CPPFLAGS) $(LIB) $< -o $@
-
-
 all:
-	make libcsi
+	make libcsi.so
 	make -C kcdc/
 	make -C test/
-
 
 clean:
 	make -C kcdc/ clean

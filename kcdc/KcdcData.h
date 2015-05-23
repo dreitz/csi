@@ -137,8 +137,8 @@ public:
             ConvertEqu2Gal(ra, dec, lon, lat);
             ra = Convert360To180(ra);
             lon = Convert360To180(lon);
-            ProjectHammerAitoff(ra, dec);
-            ProjectHammerAitoff(lon, lat);
+            //ProjectHammerAitoff(ra, dec);
+            //ProjectHammerAitoff(lon, lat);
             jdays = GetJulianDate(ymd, hms, mmn);    /// no mmn in data
             //dist = sqrt(pow((dec-40.95),2.0) + pow((ra-308.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
             dist = sqrt(pow((dec-40.95),2.0) + pow((ra+52.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
