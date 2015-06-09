@@ -44,6 +44,7 @@
 #include <iostream>
 #include <sstream>
 #include <inttypes.h>
+#include <libnova/transform.h>
 
 namespace Csi
 {
@@ -129,20 +130,31 @@ public:
             iss>>e; iss>>yc; iss>>xc; iss>>ze; iss>>az; iss>>ne; iss>>nmu; iss>>esumhad; iss>>nhad; iss>>t; iss>>p;
             iss>>gt; iss>>mt; iss>>ymd; iss>>hms; iss>>r; iss>>ev; iss>>age;
 
-            double ze2 = ze * DEG2RAD;
-            double az2 = az + 180.0;     // convert to: 0 = south, 90 = west
-            az2 = EnsureCorrectRange(az2);
-            az2 *= DEG2RAD;   // back to radians
-            ConvertHor2Equ(ra, dec, az2, ze2, ymd, hms, mmn);
-            ConvertEqu2Gal(ra, dec, lon, lat);
-            ra = Convert360To180(ra);
-            lon = Convert360To180(lon);
-            //ProjectHammerAitoff(ra, dec);
-            //ProjectHammerAitoff(lon, lat);
+   //         double ze2 = ze * DEG2RAD;
+   //         double az2 = az + 180.0;     // convert to: 0 = south, 90 = west
+   //         az2 = EnsureCorrectRange(az2);
+   //         az2 *= DEG2RAD;   // back to radians
+   //         ConvertHor2Equ(ra, dec, az2, ze2, ymd, hms, mmn);
+   //         ConvertEqu2Gal(ra, dec, lon, lat);
             jdays = GetJulianDate(ymd, hms, mmn);    /// no mmn in data
+            ln_hrz_posn inHrzPos;
+            ln_lnlat_posn observerPos;
+            ln_equ_posn equPos;
+            inHrzPos.alt = 90.0 - ze;
+            inHrzPos.az = EnsureCorrectRange(az + 180.0);
+            observerPos.lat = KASCADE_LATITUDE;
+            observerPos.lng = KASCADE_LONGITUDE;
+            ln_get_equ_from_hrz(&inHrzPos, &observerPos, jdays, &equPos);
+            ra = Convert360To180(equPos.ra);
+            dec = equPos.dec;
+            ln_gal_posn galacticPos;
+            ln_get_gal_from_equ(&equPos, &galacticPos);
+            lat = galacticPos.b;
+            lon = galacticPos.l;
+
             //dist = sqrt(pow((dec-40.95),2.0) + pow((ra-308.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
             dist = sqrt(pow((dec-40.95),2.0) + pow((ra+52.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
-            if (dist<=maxDistance || maxDistance<=0.0)
+            if (e>=15.0 && dist<=maxDistance)
             {
                 m_out   //<< s
                         << setw(11) << right << e
@@ -238,35 +250,35 @@ public:
         return alpha - tmp;
     }
 
-    ///@brief Convert horizontal coordinates (ax,ze,date) to equatorial coordinates (ra, dec)
-    void ConvertHor2Equ(double &ra, double &dec, double az, double ze, uint64_t ymd, uint64_t hms, uint64_t mmn)
-    {
-        using namespace Kcdc::DataConstants;
-        double height = PI_2 - ze;
-        double latitude = KASCADE_LATITUDE * DEG2RAD;
-        double longitude = KASCADE_LONGITUDE * DEG2RAD;
-        double hour_angle = atan2(sin(az), (cos(az) * sin(latitude) + tan(height) * cos(latitude)));
-
-        double julian = GetJulianDate(ymd, hms, mmn);
-        double gst = GetGst(julian);
-        //convert to radians
-        gst *= M_PI / 12.0 / 3600.0;
-        ra = (gst - hour_angle - longitude) * RAD2DEG;
-        ra = EnsureCorrectRange(ra);
-        dec = asin(sin(latitude) * sin(height) - cos(latitude) * cos(height) * cos(az)) * RAD2DEG;
-    }
-
-    ///@brief Convert equatorial coordinates (ra, dec) to galactic coordinates (lon, lat)
-    void ConvertEqu2Gal(double ra, double dec, double &lon, double &lat)
-    {
-        using namespace Kcdc::DataConstants;
-        double x = atan2(sin((GAL_N_POLE_RA - ra)*DEG2RAD), cos((GAL_N_POLE_RA - ra)*DEG2RAD)*sin(GAL_N_POLE_DEC*DEG2RAD) -
-                tan(dec*DEG2RAD)*cos(GAL_N_POLE_DEC*DEG2RAD));
-        lat = asin(sin(dec*DEG2RAD) * sin(GAL_N_POLE_DEC*DEG2RAD) +
-                cos(dec*DEG2RAD) * cos(GAL_N_POLE_DEC*DEG2RAD) * cos((GAL_N_POLE_RA - ra)*DEG2RAD)) * RAD2DEG;
-        lon = fmod(M_PI + GAL_LON0*DEG2RAD-x, 2*M_PI) * RAD2DEG;
-    }
-
+//    ///@brief Convert horizontal coordinates (ax,ze,date) to equatorial coordinates (ra, dec)
+//    void ConvertHor2Equ(double &ra, double &dec, double az, double ze, uint64_t ymd, uint64_t hms, uint64_t mmn)
+//    {
+//        using namespace Kcdc::DataConstants;
+//        double height = PI_2 - ze;
+//        double latitude = KASCADE_LATITUDE * DEG2RAD;
+//        double longitude = KASCADE_LONGITUDE * DEG2RAD;
+//        double hour_angle = atan2(sin(az), (cos(az) * sin(latitude) + tan(height) * cos(latitude)));
+//
+//        double julian = GetJulianDate(ymd, hms, mmn);
+//        double gst = GetGst(julian);
+//        //convert to radians
+//        gst *= M_PI / 12.0 / 3600.0;
+//        ra = (gst - hour_angle - longitude) * RAD2DEG;
+//        ra = EnsureCorrectRange(ra);
+//        dec = asin(sin(latitude) * sin(height) - cos(latitude) * cos(height) * cos(az)) * RAD2DEG;
+//    }
+//
+//    ///@brief Convert equatorial coordinates (ra, dec) to galactic coordinates (lon, lat)
+//    void ConvertEqu2Gal(double ra, double dec, double &lon, double &lat)
+//    {
+//        using namespace Kcdc::DataConstants;
+//        double x = atan2(sin((GAL_N_POLE_RA - ra)*DEG2RAD), cos((GAL_N_POLE_RA - ra)*DEG2RAD)*sin(GAL_N_POLE_DEC*DEG2RAD) -
+//                tan(dec*DEG2RAD)*cos(GAL_N_POLE_DEC*DEG2RAD));
+//        lat = asin(sin(dec*DEG2RAD) * sin(GAL_N_POLE_DEC*DEG2RAD) +
+//                cos(dec*DEG2RAD) * cos(GAL_N_POLE_DEC*DEG2RAD) * cos((GAL_N_POLE_RA - ra)*DEG2RAD)) * RAD2DEG;
+//        lon = fmod(M_PI + GAL_LON0*DEG2RAD-x, 2*M_PI) * RAD2DEG;
+//    }
+//
     ///@brief Convert from 360 degrees to +/-180
     double Convert360To180(double alpha)
     {

@@ -40,6 +40,6 @@ int main()
    Csi::Kcdc::KcdcData data;
    //             input file               output file             max distance (0.0 means no max)
    data.AddFields("data/example.data.txt", "data/example.out.txt", 0.0);
-   //data.AddFields("data.txt", "out.txt", 3.0);
+   //data.AddFields("data.txt", "out.txt", 6.0);
    return 0;
 } 
