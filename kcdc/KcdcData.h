@@ -362,7 +362,8 @@ public:
             for(uint32_t j=0; j<720; ++j)
             {
                 nrealFile << nreal(i,j) << " ";
-                nfakeFile << (nfake(i,j)/20) << " ";
+                //nfakeFile << (nfake(i,j)/20) << " ";
+                nfakeFile << (nfake(i,j)) << " ";
             }
             nrealFile << "\n";
             nfakeFile << "\n";
