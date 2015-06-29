@@ -41,5 +41,9 @@ int main()
    //             input file               output file             max distance (0.0 means no max)
    data.AddFields("data/example.data.txt", "data/example.out.txt", 0.0);
    //data.AddFields("data.txt", "out.txt", 6.0);
+
+   //data.ProcessEventStats("data.txt", "mid", 15.47712, 15.90309);
+   //data.ProcessEventStats("data.txt", "low", 15.0, 15.11394);
+   //data.ProcessEventStats("data.txt", "high", 15.90309, 1e6);
    return 0;
 } 

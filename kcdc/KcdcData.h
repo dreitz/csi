@@ -43,8 +43,12 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <valarray>
 #include <inttypes.h>
 #include <libnova/transform.h>
+#include <stdlib.h>
+
+
 
 namespace Csi
 {
@@ -130,12 +134,6 @@ public:
             iss>>e; iss>>yc; iss>>xc; iss>>ze; iss>>az; iss>>ne; iss>>nmu; iss>>esumhad; iss>>nhad; iss>>t; iss>>p;
             iss>>gt; iss>>mt; iss>>ymd; iss>>hms; iss>>r; iss>>ev; iss>>age;
 
-   //         double ze2 = ze * DEG2RAD;
-   //         double az2 = az + 180.0;     // convert to: 0 = south, 90 = west
-   //         az2 = EnsureCorrectRange(az2);
-   //         az2 *= DEG2RAD;   // back to radians
-   //         ConvertHor2Equ(ra, dec, az2, ze2, ymd, hms, mmn);
-   //         ConvertEqu2Gal(ra, dec, lon, lat);
             jdays = GetJulianDate(ymd, hms, mmn);    /// no mmn in data
             ln_hrz_posn inHrzPos;
             ln_lnlat_posn observerPos;
@@ -152,7 +150,7 @@ public:
             lat = galacticPos.b;
             lon = galacticPos.l;
 
-            //dist = sqrt(pow((dec-40.95),2.0) + pow((ra-308.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
+             //dist = sqrt(pow((dec-40.95),2.0) + pow((ra-308.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
             dist = sqrt(pow((dec-40.95),2.0) + pow((ra+52.0),2.0)/pow(cos(40.95*DEG2RAD),2.0));
             if (e>=15.0 && dist<=maxDistance)
             {
@@ -191,6 +189,184 @@ public:
         }
         m_in.close();
         m_out.close();
+        std::cout << "\nComplete!\n";
+    }
+
+    struct EventInfo
+    {
+        EventInfo() : e(0.0), zenith(0.0), azimuth(0.0), jdate(0.0), dec(0.0), ra(0.0) {}
+        EventInfo(const EventInfo& rhs) {e=rhs.e; zenith=rhs.zenith; azimuth=rhs.azimuth; jdate=rhs.jdate; dec=rhs.dec; ra=rhs.ra;}
+        double e;
+        double zenith;
+        double azimuth;
+        double jdate;
+        double dec;
+        double ra;
+    };
+
+    void ProcessEventStats(const std::string& ifname, const std::string& ofname, double emin, double emax )
+    {
+        using namespace std;
+        using namespace Kcdc::DataConstants;
+        static const double binSize = 0.5;
+        static const uint64_t eventSetSize = 100000;
+        srandom(13);
+        m_in.open(ifname.c_str(), std::ios::binary);
+        std::string tmp = ofname + std::string(".nreal.dat");
+        std::ofstream nrealFile(tmp.c_str(), std::ios::binary);
+        tmp = ofname + std::string(".nfake.dat");
+        std::ofstream nfakeFile(tmp.c_str(), std::ios::binary);
+
+        string s;
+        getline(m_in, s);
+        std::valarray<EventInfo> events(eventSetSize);
+        class Array2D
+        {
+        public:
+            Array2D(uint32_t rows, uint32_t cols, uint32_t val)
+            : m_rows(rows), m_cols(cols), m_data(val, rows*cols) {}
+            /// @brief sets all matrix elements to 0.0
+            void zeroize() {m_data = 0.0;}
+            /************* column major  *****************/
+            uint64_t& operator()(uint i,uint j) {return m_data[i*m_cols+j];}
+            /************** row major **************/
+            //double& operator()(uint i,uint j) {return m_data[i*m_cols+j];}
+        protected:
+            std::valarray<uint64_t> m_data;
+            uint32_t m_rows;
+            uint32_t m_cols;
+        };
+        Array2D nreal(360, 720, 0);
+        Array2D nfake(360, 720, 0);
+
+        uint64_t lines(0);
+        std::cout << "\nProcessing input (" << ifname << ") output (" << ofname << ")";
+        std::cout << "\n";
+
+        uint32_t eventCount(0);              // used to count events processed 0-100000;
+
+        ln_lnlat_posn observerPos;
+        observerPos.lat = KASCADE_LATITUDE;
+        observerPos.lng = KASCADE_LONGITUDE;
+
+        //while (!m_in.eof() && !m_in.fail() && lines<5000000)
+        while (!m_in.eof() && !m_in.fail())
+        {
+            ++lines;
+            getline(m_in, s);
+            if (m_in.eof()) break;
+            std::istringstream iss(s);
+            // existing
+            double e(0.0), yc(0.0), xc(0.0), ze(0.0), az(0.0), ne(0.0), nmu(0.0),
+                   esumhad(0.0);
+            int64_t nhad(0);
+            double t(0.0), p(0.0);
+            uint64_t gt(0), mt(0), ymd(0), hms(0), r(0), ev(0);
+            double age(0.0);
+            // missing
+            uint64_t mmn(0);
+            // new
+            double ra(0.0), dec(0.0), lon(0.0), lat(0.0), jdays(0.0), dist(0.0);
+
+            iss>>e; iss>>yc; iss>>xc; iss>>ze; iss>>az; iss>>ne; iss>>nmu; iss>>esumhad; iss>>nhad; iss>>t; iss>>p;
+            iss>>gt; iss>>mt; iss>>ymd; iss>>hms; iss>>r; iss>>ev; iss>>age;
+
+            jdays = GetJulianDate(ymd, hms, mmn);    /// no mmn in data
+            ln_hrz_posn inHrzPos;
+
+            ln_equ_posn equPos;
+            inHrzPos.alt = 90.0 - ze;
+            inHrzPos.az = EnsureCorrectRange(az + 180.0);
+
+            ln_get_equ_from_hrz(&inHrzPos, &observerPos, jdays, &equPos);
+            ra = Convert360To180(equPos.ra);
+            dec = equPos.dec;
+            ln_gal_posn galacticPos;
+            ln_get_gal_from_equ(&equPos, &galacticPos);
+            lat = galacticPos.b;
+            lon = galacticPos.l;
+             if (e>=emin && e<=emax)
+            {
+                //    minra  maxra   mindec   maxdec
+                //     -180    180 -10.8794  89.9953
+
+                EventInfo ei;
+                ei.e = e;
+                ei.zenith = inHrzPos.alt;
+                ei.azimuth= inHrzPos.az;
+                ei.jdate = jdays;
+                ei.dec = dec + 90.0;   // shift to match nreal indexing bins
+                ei.ra = ra + 180.0;    // shift to match nreal indexing bins
+
+                uint32_t decIdx(ei.dec/binSize);
+                uint32_t raIdx(ei.ra/binSize);
+                if (ei.dec<0 || ei.dec>180.0) std::cout << "Illegal dec= " << ei.dec << "\n";
+                if (ei.ra<0 || ei.ra>360.0) std::cout << "Illegal ra= " << ei.ra << "\n";
+                if (decIdx>359 || raIdx>719)
+                {
+                    std::cout << "Illegal index " << decIdx << ":"<<raIdx << "\n";
+                }
+
+                ++nreal(decIdx, raIdx);
+                events[eventCount] = ei; 
+                ++eventCount;
+                if (eventCount == eventSetSize)
+                {
+                    // generate 20 random events for each real event
+                    // use zenith/azimuth of one real event
+                    // use jdate from 20 other real events (selected randomly)
+                    for (uint32_t n=0; n<eventSetSize; ++n)
+                    {
+                        EventInfo ei = events[n];
+                        for (uint64_t i=0; i<20; ++i)
+                        {
+                            uint64_t idx((double)eventSetSize*((double)random()/(double)RAND_MAX));
+                            if (idx>=eventSetSize)
+                            {
+                                std::cout << "illegal event idx :" << idx << "\n";
+                            }
+                            ei.jdate = events[idx].jdate;
+                            ln_hrz_posn inHrzPos;
+                            ln_equ_posn equPos;
+                            inHrzPos.alt = ei.zenith;
+                            inHrzPos.az = ei.azimuth;
+                            ln_get_equ_from_hrz(&inHrzPos, &observerPos, ei.jdate, &equPos);
+                            double fakeRa = Convert360To180(equPos.ra)+180.0;
+                            double fakeDec = equPos.dec + 90.0;
+                            if (fakeDec<0 || fakeDec>180.0) std::cout << "Illegal fakeDec= " << fakeDec << "\n";
+                            if (fakeRa<0 || fakeRa>360.0) std::cout << "Illegal fakeRa= " << fakeRa << "\n";
+                            uint32_t fakeDecIdx(fakeDec/binSize);
+                            uint32_t fakeRaIdx(fakeRa/binSize);
+                            if (fakeDecIdx>359 || fakeRaIdx>719)
+                            {
+                                std::cout << "Illegal index " << fakeDecIdx << ":"<<fakeRaIdx << "\n";
+                            }
+                            ++nfake(fakeDecIdx,fakeRaIdx);
+                        }
+                        eventCount = 0;
+                    }
+                }
+            }
+
+            if ((lines%1000000)==0) std::cout << " " << lines <<" records processed\n";
+            else if ((lines%50000)==0) std::cout << "." << std::flush;
+
+        }
+        m_in.close();
+        std::cout << "\nComplete!\n";
+        std::cout << "Outputting matrices ...";
+        // dec row, ra col
+        // upper left dec=90, ra=-180
+        for (int64_t i=359; i>=0; --i)
+        {
+            for(uint32_t j=0; j<720; ++j)
+            {
+                nrealFile << nreal(i,j) << " ";
+                nfakeFile << (nfake(i,j)/20) << " ";
+            }
+            nrealFile << "\n";
+            nfakeFile << "\n";
+        }
         std::cout << "\nComplete!\n";
     }
 
@@ -250,35 +426,6 @@ public:
         return alpha - tmp;
     }
 
-//    ///@brief Convert horizontal coordinates (ax,ze,date) to equatorial coordinates (ra, dec)
-//    void ConvertHor2Equ(double &ra, double &dec, double az, double ze, uint64_t ymd, uint64_t hms, uint64_t mmn)
-//    {
-//        using namespace Kcdc::DataConstants;
-//        double height = PI_2 - ze;
-//        double latitude = KASCADE_LATITUDE * DEG2RAD;
-//        double longitude = KASCADE_LONGITUDE * DEG2RAD;
-//        double hour_angle = atan2(sin(az), (cos(az) * sin(latitude) + tan(height) * cos(latitude)));
-//
-//        double julian = GetJulianDate(ymd, hms, mmn);
-//        double gst = GetGst(julian);
-//        //convert to radians
-//        gst *= M_PI / 12.0 / 3600.0;
-//        ra = (gst - hour_angle - longitude) * RAD2DEG;
-//        ra = EnsureCorrectRange(ra);
-//        dec = asin(sin(latitude) * sin(height) - cos(latitude) * cos(height) * cos(az)) * RAD2DEG;
-//    }
-//
-//    ///@brief Convert equatorial coordinates (ra, dec) to galactic coordinates (lon, lat)
-//    void ConvertEqu2Gal(double ra, double dec, double &lon, double &lat)
-//    {
-//        using namespace Kcdc::DataConstants;
-//        double x = atan2(sin((GAL_N_POLE_RA - ra)*DEG2RAD), cos((GAL_N_POLE_RA - ra)*DEG2RAD)*sin(GAL_N_POLE_DEC*DEG2RAD) -
-//                tan(dec*DEG2RAD)*cos(GAL_N_POLE_DEC*DEG2RAD));
-//        lat = asin(sin(dec*DEG2RAD) * sin(GAL_N_POLE_DEC*DEG2RAD) +
-//                cos(dec*DEG2RAD) * cos(GAL_N_POLE_DEC*DEG2RAD) * cos((GAL_N_POLE_RA - ra)*DEG2RAD)) * RAD2DEG;
-//        lon = fmod(M_PI + GAL_LON0*DEG2RAD-x, 2*M_PI) * RAD2DEG;
-//    }
-//
     ///@brief Convert from 360 degrees to +/-180
     double Convert360To180(double alpha)
     {
